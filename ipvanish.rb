@@ -7,17 +7,16 @@
 #   ipvanish.rb : GUI for manage VPN connection to IPVanish networkon Linux
 #  Usage:
 #    > sudo apt-get install openvpn
-#     <<< install ruby 1.9.3 minimum >>>
+#     <<< install ruby 2.0 minimum >>>
 #    > sudo gem install pty expect rubyzip
 #    > sudo gem install Ruiby
-#    > mkdir ipvanish; ce ipvanish
-#    > wget wget http://www.ipvanish.com/software/configs
-#    > cd ...
+#    > git clone https://github.com/glurp/ipvanish-gui
+#    > cd ipvanish-gui
 #    >
 #    > sudo ruby ipvanish.rb &
 #######################################################################
 
-##################### Check machine envirronent #############" 
+##################### Check machine environement #############" 
 if `which openvpn`.size==0
    puts "Please, install 'openvpn' : > sudo apt-get install openvpn"
    exit
@@ -28,7 +27,7 @@ if !Dir.exists?("/etc") && !Dir.exists?("/user")
 end
 (puts "Must be root/sudo ! ";exit(1)) unless Process.uid==0 
 
-################## Load ruby gem dependancy #################
+################## Load ruby gem dependency #################
 def trequire(pack) 
    require pack
 rescue Exception  => e
@@ -111,9 +110,8 @@ def check_system(with_connection)
 end
 
 def get_list_server()
-  gui_invoke { @lprovider.clear ; @lprovider.add_item("get server list...") }
   begin
-    gui_invoke { @lprovider.add_item("download ovpn & crt files...") }
+    gui_invoke { @treeview.set_data([%w{. download... . .}])}
     Dir.mkdir("ipvanish") unless Dir.exists?("ipvanish")
     zipfn="ipvanish/a.zip"
     File.open(zipfn,"wb") { |f| 
@@ -125,7 +123,7 @@ def get_list_server()
     flog="/tmp/openvpn_ipvanish.log"
     Zip::File.open(zipfn) do |zip_file|
       zip_file.each do |entry|
-        puts "  Extracting #{entry.name}..."
+        #puts "  Extracting #{entry.name}..."
         fn="ipvanish/#{entry.name}"
         File.delete(fn) if File.exists?(fn)
         entry.extract(fn)
@@ -133,42 +131,48 @@ def get_list_server()
         lfn << entry.name if entry.name =~ /.ovpn$/
         if entry.name =~ /^ca.*.crt$/
           File.delete(entry.name) if File.exists?(entry.name)
-          entry.extract(entry.name) 
+          entry.extract(entry.name) # create in local directory
         end
       end
     end
     puts "loading list server (#{lfn.size})..."
-    gui_invoke { @lprovider.add_item("loading list server (#{lfn.size})...") }
+    gui_invoke { @treeview.set_data([%w{. loading . .}]) }
     provider={}
     lfn.sort.each { |name|
       _,country,town,abrev,srv=*name.split(/[\-\.]/)[0..-2]
-      p  [country,town,srv,name]
       key="%s %-15s"%[country,town]
-      provider[key]||={}
-      provider[key][srv]=name
+      provider[key]||=[country,town,{}]
+      provider[key].last[srv]=name
     }
-    $provider=provider.each_with_object({}) {|(k,v),h| h["%10s (%d)" % [k,v.size]] = v if v.size>1}
+    provider=provider.each_with_object({}) {|(k,v),h| h[k]=v  if v.last.size>0} # only contry with almost 1 server
+    provider=provider.each_with_object({}) {|(k,v),h| h[k]=v  if v.last.size>1} # only contry with several server
 
     gui_invoke {
-      @lprovider.clear
-      $provider.keys.each_with_index { |item,i| @lprovider.add_item(item) ; update if i%10==1}
+      $provider={}
+      ldata=provider.values.each_with_object([]) do |(country,town,h),lout| 
+         id=(lout.size+1).to_s
+         lout << [id,country,town,h.size.to_s]
+         $provider[id]=h
+      end
+      @treeview.set_data(ldata)
     }
   rescue Exception => e
       gui_invoke { error(e)}
   end
 end
 
-def choose_provider(item)
+def choose_provider(items)
+  item=items.split(/\s+/).first
   sel=nil
   if $provider[item].size>1
     ok=dialog("Server selection") {
-          labeli("Selection of server on #{item}")
+          labeli("Selection of server on #{items}")
           l=list("Server",100,200) {|isels,csels|  sel=csels.first}
           l.set_data($provider[item].keys)
     }
     return unless ok
   else
-    return unless ask("Ok for connection on #{item} ?")
+    return unless ask("Ok for connection on #{items} ?")
     sel=$provider[item].keys.first
   end
   $current="ipvanish/#{$provider[item][sel]}"
@@ -205,13 +209,9 @@ def choose_provider(item)
 end
 
 def connect
-  log "connect: to #{$current}"
   return unless $current.size>0
-  ovpn=$current
-  log "run openvpn..."
-  flog="/tmp/openvpn_ipvanish.log"
-  openvpn($current,ovpn,flog)
- end
+  openvpn($current,$current,"/tmp/openvpn_ipvanish.log")
+end
 
  def openvpn(name,cfg,flog)
   openvpn = "openvpn --script-security 3 --verb 4 --config #{cfg} 2>&1"
@@ -325,10 +325,9 @@ Ruiby.app width: 500,height: 400,title: "IPVanish VPN Connection" do
        end
        separator
        stack do
-         @lprovider=list("Providers:",200,200) { |item| 
-            @pvc.text=@lprovider.get_data[item.first] rescue nil
+         @treeview=grid(%w{ID Country Town #Servers},200,200) { |lvalues| 
+            @pvc.text=lvalues[0..2].join(" ") rescue nil
          }
-         @lprovider.add_item("Loading...")
          flowi { 
            @pvc=entry("...",width:200)
            button("Connect...") { choose_provider(@pvc.text) if @pvc.text.size>3 }
