@@ -55,7 +55,7 @@ $style_ok= <<EOF
 * { background-image:  -gtk-gradient(linear, left top, left bottom,  from(#066), to(#ACC));
     color: #FFFFFF;
 }
-GtkEntry,GtkTreeView { background-image:  -gtk-gradient(linear, left top, left bottom,  
+GtkEntry,GtkTreeView,GtkTreeView GtkLabel { background-image:  -gtk-gradient(linear, left top, left bottom,  
       from(#FFE), to(#EED));
     color: #000;
 }
@@ -63,18 +63,25 @@ GtkButton, GtkButton > GtkLabel { background-image:  -gtk-gradient(linear, left 
       from(#FFE), to(#FFA));
     color: #000;
 }
+GtkButton:active { background-image:  -gtk-gradient(linear, left top, left bottom,  
+      from(#FF0), to(#FF3));
+}
+
 EOF
 $style_nok= <<EOF
 * { background-image:  -gtk-gradient(linear, left top, left bottom,  from(#966), to(#FCC));
     color: #FFFFFF;
 }
-GtkEntry,GtkTreeView { background-image:  -gtk-gradient(linear, left top, left bottom,  
+GtkEntry,GtkTreeView,GtkTreeView GtkLabel  { background-image:  -gtk-gradient(linear, left top, left bottom,  
       from(#FFA), to(#EE6));
     color: #000;
 }
 GtkButton, GtkButton > GtkLabel { background-image:  -gtk-gradient(linear, left top, left bottom,  
       from(#FFC), to(#EEB));
     color: #000;
+}
+GtkButton:active { background-image:  -gtk-gradient(linear, left top, left bottom,  
+      from(#EEB), to(#EE0));
 }
 EOF
 
@@ -350,6 +357,7 @@ Ruiby.app width: 500,height: 400,title: "IPVanish VPN Connection" do
       get_list_server
     }
   end  
+  after(1) { status_connection(false) } 
   set_icon "ipvanish.png" 
   ############### icon animation
   anim(1000) {
