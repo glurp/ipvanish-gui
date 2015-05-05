@@ -358,7 +358,7 @@ Ruiby.app width: 500,height: 400,title: "IPVanish VPN Connection" do
   end
   ############### initial traitments
   after(50) do
-    status_connection(true)
+    status_connection(false)
     Thread.new {
        begin
          puts "get public ip..."
