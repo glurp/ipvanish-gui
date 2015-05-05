@@ -55,10 +55,17 @@ $style_ok= <<EOF
 * { background-image:  -gtk-gradient(linear, left top, left bottom,  from(#066), to(#ACC));
     color: #FFFFFF;
 }
-GtkEntry,GtkTreeView,GtkTreeView GtkLabel { background-image:  -gtk-gradient(linear, left top, left bottom,  
-      from(#FFE), to(#EED));
+
+GtkEntry,GtkTreeView,GtkTreeView GtkLabel { 
+   background-image:  -gtk-gradient(linear, left top, left bottom, from(#FFB), to(#EED));
     color: #000;
 }
+GtkTreeView row:selected  {
+  background-image: none;
+  background-color: #AA7;
+  color: #000;
+}
+
 GtkButton, GtkButton > GtkLabel { background-image:  -gtk-gradient(linear, left top, left bottom,  
       from(#FFE), to(#FFA));
     color: #000;
@@ -76,6 +83,12 @@ GtkEntry,GtkTreeView,GtkTreeView GtkLabel  { background-image:  -gtk-gradient(li
       from(#FFA), to(#EE6));
     color: #000;
 }
+GtkTreeView row:selected  {
+  background-image: none;
+  background-color: #500;
+  color: #FF0;
+}
+
 GtkButton, GtkButton > GtkLabel { background-image:  -gtk-gradient(linear, left top, left bottom,  
       from(#FFC), to(#EEB));
     color: #000;
@@ -174,7 +187,7 @@ def choose_provider(items)
   if $provider[item].size>1
     ok=dialog("Server selection") {
           labeli("Selection of server on #{items}")
-          l=list("Server",100,200) {|isels,csels|  sel=csels.first}
+          l=list("Server",100,200) {|isels,csels|  sel=csels.first ; true}
           l.set_data($provider[item].keys)
     }
     return unless ok
@@ -334,6 +347,7 @@ Ruiby.app width: 500,height: 400,title: "IPVanish VPN Connection" do
        stack do
          @treeview=grid(%w{ID Country Town #Servers},200,200) { |lvalues| 
             @pvc.text=lvalues[0..2].join(" ") rescue nil
+            true
          }
          flowi { 
            @pvc=entry("...",width:200)
@@ -344,6 +358,7 @@ Ruiby.app width: 500,height: 400,title: "IPVanish VPN Connection" do
   end
   ############### initial traitments
   after(50) do
+    status_connection(true)
     Thread.new {
        begin
          puts "get public ip..."
@@ -357,7 +372,6 @@ Ruiby.app width: 500,height: 400,title: "IPVanish VPN Connection" do
       get_list_server
     }
   end  
-  after(1) { status_connection(false) } 
   set_icon "ipvanish.png" 
   ############### icon animation
   anim(1000) {
